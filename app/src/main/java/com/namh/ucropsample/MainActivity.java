@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -22,6 +23,10 @@ import android.widget.Toast;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
+import java.util.Calendar;
 
 public class MainActivity extends BaseActivity {
 
@@ -43,6 +48,7 @@ public class MainActivity extends BaseActivity {
 
     private Uri mDestinationUri;
     private ImageView mImageView;
+    private Uri mResultUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,9 +68,13 @@ public class MainActivity extends BaseActivity {
 
         // setup crop
         mDestinationUri = Uri.fromFile(new File(getCacheDir(), SAMPLE_CROPPED_IMAGE_NAME));
-        _setupPickButton();
         mImageView = ((ImageView) findViewById(R.id.image_view_preview));
+        _setupPickButton();
+        _setupSaveButton();
+
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -123,11 +133,11 @@ public class MainActivity extends BaseActivity {
 
 
     private void handleCropResult(@NonNull Intent result) {
-        final Uri resultUri = UCrop.getOutput(result);
-        if (resultUri != null) {
+        mResultUri = UCrop.getOutput(result);
+        if (mResultUri != null) {
             // ResultActivity.startWithUri(MainActivity.this, resultUri);
-            Toast.makeText(MainActivity.this, resultUri.toString(), Toast.LENGTH_SHORT).show();
-            mImageView.setImageURI(resultUri);
+            Toast.makeText(MainActivity.this, mResultUri.toString(), Toast.LENGTH_SHORT).show();
+            mImageView.setImageURI(mResultUri);
 
 
         } else {
@@ -147,6 +157,62 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+
+    private void _setupSaveButton() {
+        findViewById(R.id.button_save).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                _saveCroppedImage();
+            }
+        });
+
+
+    }
+
+    private void _saveCroppedImage() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    getString(R.string.permission_write_storage_rationale),
+                    REQUEST_STORAGE_WRITE_ACCESS_PERMISSION);
+        } else {
+            Uri imageUri = mResultUri;
+            if (imageUri != null && imageUri.getScheme().equals("file")) {
+                try {
+                    copyFileToDownloads(imageUri);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, imageUri.toString(), e);
+                }
+            } else {
+                Toast.makeText(MainActivity.this, getString(R.string.toast_unexpected_error), Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void copyFileToDownloads(Uri croppedFileUri) throws Exception {
+        String downloadsDirectoryPath
+                = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                .getAbsolutePath();
+        String filename = String.format(
+                "%d_%s",
+                Calendar.getInstance().getTimeInMillis(),
+                croppedFileUri.getLastPathSegment());
+
+        File saveFile = new File(downloadsDirectoryPath, filename);
+
+        FileInputStream inStream = new FileInputStream(new File(croppedFileUri.getPath()));
+        FileOutputStream outStream = new FileOutputStream(saveFile);
+        FileChannel inChannel = inStream.getChannel();
+        FileChannel outChannel = outStream.getChannel();
+        inChannel.transferTo(0, inChannel.size(), outChannel);
+        inStream.close();
+        outStream.close();
+
+        // showNotification(saveFile);
+        Toast.makeText(MainActivity.this, getString(R.string.toast_image_saved), Toast.LENGTH_SHORT).show();
+    }
 
     private void _setupPickButton(){
 

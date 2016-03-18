@@ -23,11 +23,22 @@
         android:textColor="@android:color/white"
         android:textAppearance="?android:textAppearanceMedium"
         android:textStyle="bold"/>
+    <Button
+        android:id="@+id/button_save"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_save"
+        android:textAllCaps="true"
+        android:textColor="@android:color/white"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textStyle="bold"
+        android:layout_below="@id/button_crop"/>
 
     <ImageView
         android:id="@+id/image_view_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:contentDescription="@string/description_cropped_image"/>
+        android:contentDescription="@string/description_cropped_image"
+        android:layout_below="@id/button_save"/>
 
 </RelativeLayout>
